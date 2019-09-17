@@ -2,6 +2,8 @@
 
 ## Questions 1
 
+Data available at this [adddres](https://www.kaggle.com/dgomonov/new-york-city-airbnb-open-data/version/3?)
+
 1. What is the problem of interest? (describe what your data is about in general terms, i.e. “to someone who knows nothing of machine learning”)
     * The data is about airbnb properties in NYC.
     * Each observation contains useful information like:
