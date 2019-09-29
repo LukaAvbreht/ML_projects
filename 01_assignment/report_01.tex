@@ -1,5 +1,7 @@
 \documentclass[]{report}
 
+\usepackage{tabularx} % in the preamble
+
 
 % Title Page
 \title{Project 1: \\ Data: Feature extraction, and visualization}
@@ -12,6 +14,101 @@
 %\begin{abstract}
 %\end{abstract}
 
+\section{Section 1: A description of your data set}
 
+
+1. What is the problem of interest? (describe what your data is about in general terms, i.e. “to someone who knows nothing of machine learning”)
+
+Our data is a dataset of all AirBnB apartments and other locations available in New York City in summer of 2019. AirBnB is a very popular booking application where people can list their homes, or book a stay in someone's else's home. In our data set we have all kinds of info, from names of properties offered, to coordinates and review stats of each home. Our data set is freely available on the link \cite{data_website}.
+
+%* The data is about airbnb properties in NYC.
+%* Each observation contains useful information like:
+%* Price
+%* Coordinates
+%* Neighbourhood name
+%* Availability
+%* Name of property
+%* ...
+
+\hspace{1cm}
+
+2. Who made the data and why? Did they, or somebody else, work with the data and report results? If so, what were their results?
+
+Data set was published by AirBnB for public use. Their main inspiration is as follows.
+\begin{itemize}
+	\item What can we learn about different hosts and areas?
+	\item What can we learn from predictions? (ex: locations, prices, reviews, etc)
+	\item Which hosts are the busiest and why?
+	\item Is there any noticeable difference of traffic among different areas and what could be the reason for it?
+\end{itemize}
+
+As far as we know, no one did anything significant with this dataset.
+
+\hspace{1cm}
+3. What is the primary machine learning modelling aim? (Is it primarily a classification, a regression, a clustering, an association mining, or an anomaly detection problem?)
+
+Whit this data set it is possible to do a project with main aim to almost any of this classes. We will primary use it for clustering (apartments with similar audience, similar properties such as proximity to some important points...), an association mining and some regression (TODO TODO), but there is also a huge possibility for anomaly detection network.   
+
+\hspace{1cm}
+4. Which attributes are relevant when carrying out a classification, a regression, a clustering, an association mining, and an anomaly detection? Specifically: Which attribute do you wish to explain in the regression based on which other attributes? Which class label will you predict based on which other attributes in the classification task?
+
+This is the list of all attributes:
+\begin{itemize}
+\item \textbf{id} listing ID
+\item \textbf{name} name of the listing
+\item \textbf{host\_id} host ID
+\item \textbf{host\_name} name of the host
+\item \textbf{neighbourhood\_group} location
+\item \textbf{neighbourhood} area
+\item \textbf{latitude} latitude coordinates
+\item \textbf{longitude} longitude coordinates
+\item \textbf{room\_type} listing space type
+\item \textbf{price} price in dollars
+\item \textbf{minimum\_nights} amount of nights minimum
+\item \textbf{number\_of\_reviews} number of reviews
+\item \textbf{last\_revieW} latest review
+\item \textbf{reviews\_per\_month} number of reviews per month
+\item \textbf{calculated\_host\_listings\_count} amount of listing per host
+\item \textbf{availability\_365} number of days when listing is available for booking
+\end{itemize}
+
+\hspace{1cm}
+5. Are there any data issues? Either directly reported in the accompanying dataset description or apparent by inspection of the data? (such as missing values or incorrect/corrupted values)
+
+We can se some minor issues with our data. 
+\begin{itemize}
+	\item We don't know the exact date on which the data was picked (prices are the main concern since they change over the year)
+	\item Some of the properties are outdated, they are not listed on AirBnB anymore. We are missing some data that may come in handy. (such as which users are so called super hosts, \item TODO %TODO )
+\end{itemize}
+But overall we think our data set is very clean and offers enough info to carry out all required tasks. 
+
+
+\section{The responsibility assignment}
+
+\begin{table}[!h]
+	\caption{Responsibility assignment}
+	\begin{tabularx}{\textwidth}{|X|l|l|} \hline
+		Section 1 & Luka Avbreht & 45\% \\ \hline
+		Section 2 &  &  \\ \hline
+		Section 3 &  &  \\ \hline
+	\end{tabularx}
+\end{table}
+
+\begin{thebibliography}{1}
+%	\bibitem{latexcompanion} 
+%	Michel Goossens, Frank Mittelbach, and Alexander Samarin. 
+%	\textit{The \LaTeX\ Companion}. 
+%	Addison-Wesley, Reading, Massachusetts, 1993.
+%	
+%	\bibitem{einstein} 
+%	Albert Einstein. 
+%	\textit{Zur Elektrodynamik bewegter K{\"o}rper}. (German) 
+%	[\textit{On the electrodynamics of moving bodies}]. 
+%	Annalen der Physik, 322(10):891–921, 1905.
+	
+	\bibitem{data_website} 
+	AirBnB open data set, (accessed on 20.9.2019)
+	\\\texttt{https://www.kaggle.com/dgomonov/new-york-city-airbnb-open-data/version/3?}
+\end{thebibliography}
 
 \end{document}          
