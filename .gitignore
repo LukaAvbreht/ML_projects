@@ -107,3 +107,6 @@ venv.bak/
 *.aux
 *.gz
 *.log
+
+# Toolbox data
+02450Toolbox_Python/
