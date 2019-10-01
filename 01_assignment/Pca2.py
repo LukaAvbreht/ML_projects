@@ -28,12 +28,28 @@ attributes_datatype = {
 attributes_dates = ["last_review"]
 
 data_frame = pd.read_csv(airbnb_data,dtype=attributes_datatype,parse_dates=attributes_dates)
+
 data_frame.fillna(0, inplace=True)
+
+data_frame = data_frame.iloc[::10, :]
 
 raw_data = data_frame.get_values()
 attributes = list(data_frame.columns)
 
-print(attributes)
+unique_neighbourhoods = data_frame['neighbourhood_group'].unique()
+unique_roomtypes = data_frame['room_type'].unique()
+nbh_dict = dict()
+rty_dict = dict()
+for i,nbh in enumerate(unique_neighbourhoods):
+    nbh_dict[nbh] = i
+for i,rtp in enumerate(unique_roomtypes):
+    rty_dict[rtp] = i
+
+# Replace boroughs and room types with numbers (0,1,2)
+for listing in raw_data:
+    listing[4] = nbh_dict[listing[4]]
+    listing[8] = rty_dict[listing[8]]
+
 
 prity_atributes = [
     'id',
@@ -57,10 +73,12 @@ prity_atributes = [
 # # filter out all of the data that is of type string (text fields) and are not just id's
 # also filter out longitude and latitude
 # non_text_fields = (9, 10, 11, 13, 14, 15)
-non_text_fields = (9, 10, 14, 15)
+non_text_fields = (4, 8, 10, 11, 13, 14, 15)
 selected_atribute_names = [i for j,i in enumerate(prity_atributes) if (j in non_text_fields)]
 filtered_data = raw_data[:,non_text_fields]
 filtered_attributes = [attributes[i] for i in non_text_fields]
+
+# print("price",np.max(raw_data[:,9]))
 
 N, M = filtered_data.shape
 
@@ -98,17 +116,17 @@ threshold = 0.90
 
 # Plots of pcs effect on data
 
-# Plot variance explained withotut std
-# plt.figure()
-# plt.plot(range(1,len(rho)+1),rho,'x-')
-# plt.plot(range(1,len(rho)+1),np.cumsum(rho),'o-')
-# plt.plot([1,len(rho)],[threshold, threshold],'k--')
-# plt.title('Variance explained by principal components');
-# plt.xlabel('Principal component');
-# plt.ylabel('Variance explained');
-# plt.legend(['Individual','Cumulative','Threshold'])
-# plt.grid()
-# plt.show()
+# # Plot variance explained withotut std
+plt.figure()
+plt.plot(range(1,len(rho)+1),rho,'x-')
+plt.plot(range(1,len(rho)+1),np.cumsum(rho),'o-')
+plt.plot([1,len(rho)],[threshold, threshold],'k--')
+plt.title('Variance explained by principal components');
+plt.xlabel('Principal component');
+plt.ylabel('Variance explained');
+plt.legend(['Individual','Cumulative','Threshold'])
+plt.grid()
+plt.show()
 
 # Plot variance explained with std
 # plt.figure()
@@ -130,72 +148,59 @@ V2 = Vh2.T
 Z2 = Y2 @ V2
 
 # Get all unique neighbourhoods
-unique_neighbourhoods = data_frame['neighbourhood_group'].unique()
 
-unique_roomtypes = data_frame['room_type'].unique()
-print(unique_roomtypes)
+# y_nbh = list()
+# y_rty = list()
+# for listing in raw_data:
+#     for i,j in enumerate(unique_neighbourhoods):
+#         if listing[4] == j:
+#             y_nbh.append(i)
+#     for i,j in enumerate(unique_roomtypes):
+#         if listing[8] == j:
+#             y_rty.append(i)
+#
+# y_nbh = np.array(y_nbh)
+# y_rty = np.array(y_rty)
 
-
-
-y_nbh = list()
-y_rty = list()
+# price_ranges = [(0,50),(50,100),(100,150),(150,200),(200,350),(350,500),(500,1000),(1000,9999999)]
+price_ranges = [(0,100),(100,250),(250,500),(500,99999999)]
+price_ranges_p = ["0 - 100","100 - 250","250 - 500","500 - "]
+y_prc = list()
 for listing in raw_data:
-    for i,j in enumerate(unique_neighbourhoods):
-        if listing[4] == j:
-            y_nbh.append(i)
-    for i,j in enumerate(unique_roomtypes):
-        if listing[8] == j:
-            y_rty.append(i)
+    for i,(j,k) in enumerate(price_ranges):
+        if j <= listing[9] < k:
+            y_prc.append(i)
 
-y_nbh = np.array(y_nbh)
-y_rty = np.array(y_rty)
+y_prc = np.array(y_prc)
 
 # Indices of the principal components to be plotted
 cp1 = 0
-cp2 = 1
+cp2 = 2
 
 # data ploted in pc1 vs pc2 projection
 
-# for c in range(len(unique_neighbourhoods)):
-#     # select indices belonging to class c:
-#     class_mask = [(y_nbh[i]==c) for i in range(y_nbh.size)]
-#     plt.plot(Z[class_mask,cp1], Z[class_mask,cp2], 'o', alpha=.5)
-# plt.legend(unique_neighbourhoods)
-# plt.title("Neighbourhoods in PC space")
-# plt.xlabel('PC{0}'.format(cp1+1))
-# plt.ylabel('PC{0}'.format(cp2+1))
-# plt.show()
-
-# for c in range(len(unique_roomtypes)):
-#     # select indices belonging to class c:
-#     class_mask = [(y_rty[i]==c) for i in range(y_rty.size)]
-#     plt.plot(Z[class_mask,cp1], Z[class_mask,cp2], 'o', alpha=.5)
-# plt.legend(unique_roomtypes)
-# plt.title("Room types in PC space")
-# plt.xlabel('PC{0}'.format(cp1+1))
-# plt.ylabel('PC{0}'.format(cp2+1))
-# plt.show()
+kere = range(4)
+for c in kere: # range(len(price_ranges)):
+    # select indices belonging to class c:
+    class_mask = [(y_prc[i]==c) for i in range(y_prc.size)]
+    plt.plot(Z[class_mask,cp1], Z[class_mask,cp2], 'o', alpha=.4)
+plt.legend([price_ranges_p[i] for i in kere])
+plt.title("Neighbourhoods in PC space")
+plt.xlabel('PC{0}'.format(cp1+1))
+plt.ylabel('PC{0}'.format(cp2+1))
+plt.show()
 
 
-# for c in range(len(unique_roomtypes)):
-#     # select indices belonging to class c:
-#     class_mask = [(y_rty[i]==c) for i in range(y_rty.size)]
-#     plt.plot(Z2[class_mask,cp1], Z2[class_mask,cp2], 'o', alpha=.5)
-# plt.legend(unique_roomtypes)
-# plt.title("Room types in PC space")
-# plt.xlabel('PC{0}'.format(cp1+1))
-# plt.ylabel('PC{0}'.format(cp2+1))
-# plt.show()
+for c in kere: # range(len(price_ranges)):
+    # select indices belonging to class c:
+    class_mask = [(y_prc[i]==c) for i in range(y_prc.size)]
+    plt.plot(Z2[class_mask,cp1], Z2[class_mask,cp2], 'o', alpha=.4)
+plt.legend([price_ranges_p[i] for i in kere])
+plt.title("Room types in PC space")
+plt.xlabel('PC{0}'.format(cp1+1))
+plt.ylabel('PC{0}'.format(cp2+1))
+plt.show()
 
-# for c in range(len(unique_neighbourhoods)):
-#     # select indices belonging to class c:
-#     class_mask = [(y_nbh[i]==c) for i in range(y_nbh.size)]
-#     plt.plot(Z2[class_mask,cp1], Z2[class_mask,cp2], 'o', alpha=.5)
-# plt.legend(unique_neighbourhoods)
-# plt.title("Neighbourhoods in PC space")
-# plt.xlabel('PC{0}'.format(cp1+1))
-# plt.ylabel('PC{0}'.format(cp2+1))
-# plt.show()
 
 
 # effects of parameters to top n pca's
