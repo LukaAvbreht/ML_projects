@@ -191,6 +191,7 @@ plt.ylabel('PC{0}'.format(cp2+1))
 plt.show()
 
 
+# The nice looking one !!!
 for c in kere: # range(len(price_ranges)):
     # select indices belonging to class c:
     class_mask = [(y_prc[i]==c) for i in range(y_prc.size)]
@@ -223,6 +224,8 @@ plt.show()
 # plt.show()
 
 
+
+# The nice looking one !!!
 pcs = [0,1,2]
 legendStrs = ['PC'+str(e+1) for e in pcs]
 # c = ['r','g','b']
