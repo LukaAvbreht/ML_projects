@@ -10,8 +10,9 @@ import sklearn.model_selection as skmd
 from toolbox.Toolbox_Python02450.Tools.toolbox_02450 import feature_selector_lr, bmplot, rlr_validate
 from matplotlib.pyplot import figure, plot, xlabel, ylabel, clim, semilogx, loglog, legend, title, subplot, show, grid
 import pprint
-
 import random
+
+random.seed = 1337
 
 airbnb_data = "../data/AB_NYC_2019.csv"
 
@@ -214,6 +215,7 @@ for train_index, test_index in Kfold.split(X):
     Error_train[k] = np.square(y_train - m.predict(X_train)).sum() / y_train.shape[0]
     Error_test[k] = np.square(y_test - m.predict(X_test)).sum() / y_test.shape[0]
 
+
     # Compute squared error with feature subset selection
     # textout = 'verbose';
     textout = '';
@@ -351,8 +353,13 @@ print("\n Part A \n 2) \n")
 #
 # show()
 
-X2 = np.concatenate((np.ones((XX.shape[0],1)),XX),1)
-X2_labesls = [u'Offset']+XX_labesls
+# Only take fetures we got from part a
+print("Selected features: ",selected_features)
+# We take only the data of that features
+XXX = XX[:,selected_features]
+
+X2 = np.concatenate((np.ones((XXX.shape[0],1)),XXX),1)
+X2_labesls = [u'Offset']+[i for j,i in enumerate(XX_labesls) if j in selected_features]
 
 ## Crossvalidation
 # Create crossvalidation partition for evaluation
@@ -376,6 +383,10 @@ w_rlr = np.empty((M,K))
 mu = np.empty((K, M-1))
 sigma = np.empty((K, M-1))
 w_noreg = np.empty((M,K))
+
+# TO export to part 2
+OPT_lambda_part_2 = None
+
 
 k = 0
 for train_index, test_index in CV.split(X2, YY):
@@ -443,7 +454,9 @@ for train_index, test_index in CV.split(X2, YY):
         grid()
         # You can choose to display the legend, but it's omitted for a cleaner
         # plot, since there are many attributes
-        # legend(attributeNames[1:], loc='best')
+        legend(X2_labesls[1:], loc='best')
+
+        OPT_lambda_part_2 = opt_lambda
 
         subplot(1, 2, 2)
         title('Optimal lambda: 1e{0}'.format(np.log10(opt_lambda)))
