@@ -278,4 +278,4 @@ print(Error_test_baseline)
 
 # Latex table
 for index,res in enumerate(zip(Opt_h_ann, Error_test_ann, Opt_lambdas_lin, Error_test_lin, Error_test_baseline)):
-    print(str(index)+" & "+" & ".join(map(str,res))+r" \\")
+    print(str(index)+" & {0:.3f} & {1:.3f} & {2:.3f} & {3:.3f} & {4:.3f}".format(*[i[0] for i in res])+r" \\")
