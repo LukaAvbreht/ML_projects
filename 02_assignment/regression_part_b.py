@@ -7,13 +7,13 @@ from categoric2numeric import categoric2numeric
 from matplotlib.pyplot import figure, plot, xlabel, ylabel, legend, show
 import sklearn.linear_model as lm
 import sklearn.model_selection as skmd
-from toolbox.Toolbox_Python02450.Tools.toolbox_02450 import feature_selector_lr, bmplot, rlr_validate, train_neural_net
+from toolbox.Toolbox_Python02450.Tools.toolbox_02450 import feature_selector_lr, bmplot, rlr_validate, train_neural_net, draw_neural_net
 from matplotlib.pyplot import figure, plot, xlabel, ylabel, clim, semilogx, loglog, legend, title, subplot, show, grid
 import pprint
 import random
 import torch
 
-from regression_part_a import OPT_lambda_part_2, X2, YY, XX
+from regression_part_a import OPT_lambda_part_2, X2, YY, XX, X2_labesls
 
 # Again import data
 airbnb_data = "../data/AB_NYC_2019.csv"
@@ -88,13 +88,16 @@ unique_neighbourhoods = data_frame['neighbourhood'].unique()
 print("\n Part B \n 1) \n")
 
 lambdas = np.power(10., range(-5, 9))
-h_vals = np.array(list(range(1, 20, 2)))
+h_vals = np.array(list(range(1, 40, 4)))
 
 print("Lambdas Used:")
 pprint.pprint(lambdas)
 
 print("Hidden layers used: ")
 pprint.pprint(h_vals)
+
+best_net = None
+learning_curve_best = None
 
 
 def two_level_cross_validation():
@@ -249,6 +252,9 @@ def two_level_cross_validation():
                 hopt = n_hidden_units
                 best_val = eval_error
 
+                learning_curve_best = learning_curve
+                best_net = net
+
         Error_test_ann[k] = best_val
         Opt_h_ann[k] = hopt
 
@@ -279,3 +285,20 @@ print(Error_test_baseline)
 # Latex table
 for index,res in enumerate(zip(Opt_h_ann, Error_test_ann, Opt_lambdas_lin, Error_test_lin, Error_test_baseline)):
     print(str(index)+" & {0:.3f} & {1:.3f} & {2:.3f} & {3:.3f} & {4:.3f}".format(*[i[0] for i in res])+r" \\")
+
+# Draw neural net and learning curve for last layer
+weights = [best_net[i].weight.data.numpy().T for i in [0,2]]
+biases = [best_net[i].bias.data.numpy() for i in [0,2]]
+tf = [str(best_net[i]) for i in [1,3]]
+draw_neural_net(weights, biases, tf, attribute_names=X2_labesls)
+
+
+# Plot learning curves
+plt.plot(learning_curve_best)
+plt.ylabel("Error")
+plt.xlabel('Iterations')
+plt.xlim((0, 10000))
+plt.ylabel('Loss')
+plt.title('Learning curves')
+plt.show()
+
