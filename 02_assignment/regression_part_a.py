@@ -494,6 +494,8 @@ print('Weights in last fold:')
 for m in range(M):
     print('{:>15} {:>15}'.format(X2_labesls[m], np.round(w_rlr[m,-1],2)))
 
+print("Optimal lambda: ",OPT_lambda_part_2)
+
 # -- Regression PART A --
 # -- 3)     --
 print("\n Part A \n 3) \n")
