@@ -147,6 +147,7 @@ X = np.concatenate((X_K1, other_data), axis=1)
 X_labesls = K1_labels + [attributes[i] for i in other_params]
 
 def compare_ann_lin_reg():
+    C = 3
     opt_lam =15.264
     h_lays = 15
     N, M = X.shape
@@ -187,7 +188,7 @@ def compare_ann_lin_reg():
             y_test_in = Y[inner_test_index].astype(np.float64)
 
             X_train_in_torch = torch.tensor(X_train_in, dtype=torch.float)
-            y_train_in_torch = torch.tensor(y_train_in, dtype=torch.float)
+            y_train_in_torch = torch.tensor(y_train_in, dtype=torch.long)
             X_test_in_torch = torch.tensor(X_test_in, dtype=torch.float)
 
             y_train_in = y_train_in.reshape((y_train_in.shape[0],))
@@ -314,14 +315,13 @@ def compare_baseline_lin_reg():
 
         ink = 0
         for inner_train_index, inner_test_index in CV.split(X_train, y_train):
-
             X_train_in = X[inner_train_index].astype(np.float64)
             y_train_in = Y[inner_train_index].astype(np.float64)
             X_test_in = X[inner_test_index].astype(np.float64)
             y_test_in = Y[inner_test_index].astype(np.float64)
 
             X_train_in_torch = torch.tensor(X_train_in, dtype=torch.float)
-            y_train_in_torch = torch.tensor(y_train_in, dtype=torch.float)
+            y_train_in_torch = torch.tensor(y_train_in, dtype=torch.long)
             X_test_in_torch = torch.tensor(X_test_in, dtype=torch.float)
 
             y_train_in = y_train_in.reshape((y_train_in.shape[0],))
@@ -329,43 +329,22 @@ def compare_baseline_lin_reg():
 
             # Linear regressoin
 
-            mu = np.mean(X_train_in[:, 1:], 0)
-            sigma = np.std(X_train_in[:, 1:], 0)
+            mdl = LogisticRegression(penalty='l2', C=1 / opt_lam, solver="lbfgs", multi_class="auto",
+                                     max_iter=10000)
 
-            X_train_in[:, 1:] = (X_train_in[:, 1:] - mu) / sigma
-            X_test_in[:, 1:] = (X_test_in[:, 1:] - mu) / sigma
+            mdl.fit(X_train_in, y_train_in)
 
-            Xty = X_train_in.T @ y_train_in
-            XtX = X_train_in.T @ X_train_in
+            y_train_est = mdl.predict(X_train_in).T
+            y_test_est = mdl.predict(X_test_in).T
 
-            # Compute mean squared error without using the input data at all
-            Error_train_nofeatures = np.square(y_train_in - y_train_in.mean()).sum(axis=0) / y_train_in.shape[0]
-            Error_test_nofeatures = np.square(y_test_in - y_test_in.mean()).sum(axis=0) / y_test_in.shape[0]
-
-            # Estimate weights for the optimal value of lambda, on entire training set
-            lambdaI = opt_lam * np.eye(M)
-            lambdaI[0, 0] = 0  # Do no regularize the bias term
-            w_rlr = np.linalg.solve(XtX + lambdaI, Xty).squeeze()
-            # Compute mean squared error with regularization with optimal lambda
-            Error_train_rlr = np.square(y_train_in - X_train_in @ w_rlr).sum(axis=0) / y_train_in.shape[0]
-
-            Error_test_rlr = np.square(y_test_in - X_test_in @ w_rlr).sum(axis=0) / y_test_in.shape[0]
-
-            # Estimate weights for unregularized linear regression, on entire training set
-            w_noreg = np.linalg.solve(XtX, Xty).squeeze()
-            # Compute mean squared error without regularization
-            Error_train_lin = np.square(y_train_in - X_train_in @ w_noreg).sum(axis=0) / y_train_in.shape[0]
-
-            # The importatn thing
-            Error_test_lin_e = np.square(y_test_in - X_test_in @ w_noreg).sum(axis=0) / y_test_in.shape[0]
+            Error_test_lin_e = np.sum(y_test_est != y_test_in) / len(y_test_in)
 
             Error_test_lin_inner[ink] = Error_test_lin_e
 
             # baseline
 
-            y_pred = np.mean(y_train_in)
-
-            eval_error = np.square(y_test_in - y_pred).sum(axis=0) / y_test.shape[0]
+            unique, counts = np.unique(y_train, return_counts=True)
+            eval_error = max(counts) / sum(counts)
 
             Error_test_basline_inner[ink] = eval_error
 
@@ -427,7 +406,7 @@ def compare_ann_baseline():
             y_test_in = Y[inner_test_index].astype(np.float64)
 
             X_train_in_torch = torch.tensor(X_train_in, dtype=torch.float)
-            y_train_in_torch = torch.tensor(y_train_in, dtype=torch.float)
+            y_train_in_torch = torch.tensor(y_train_in, dtype=torch.long)
             X_test_in_torch = torch.tensor(X_test_in, dtype=torch.float)
 
             y_train_in = y_train_in.reshape((y_train_in.shape[0],))
@@ -435,32 +414,48 @@ def compare_ann_baseline():
 
             # Baseline
 
-            y_pred = np.mean(y_train_in)
+            unique, counts = np.unique(y_train, return_counts=True)
+            eval_error = max(counts) / sum(counts)
 
-            eval_error = np.square(y_test_in - y_pred).sum(axis=0) / y_test.shape[0]
-
-            Error_test_baseline_inner[ink] = eval_error
+            Error_test_basline_inner[ink] = eval_error
 
             # ANN
 
             model = lambda: torch.nn.Sequential(
                 torch.nn.Linear(M, h_lays),  # M features to H hiden units
-                # 1st transfer function, either Tanh or ReLU:
-                torch.nn.ReLU(),
-                # torch.nn.Tanh(),
-                torch.nn.Linear(h_lays, 1),  # H hidden units to 1 output neuron
-                # torch.nn.Sigmoid()  # final tranfer function
+                torch.nn.ReLU(),  # 1st transfer function
+                # Output layer:
+                # H hidden units to C classes
+                # the nodes and their activation before the transfer
+                # function is often referred to as logits/logit output
+                torch.nn.Linear(h_lays, C),  # C logits
+                # To obtain normalised "probabilities" of each class
+                # we use the softmax-funtion along the "class" dimension
+                # (i.e. not the dimension describing observations)
+                torch.nn.Softmax(dim=1)  # final tranfer function, normalisation of logit output
             )
 
-            loss_fn = torch.nn.MSELoss()
+            loss_fn = torch.nn.CrossEntropyLoss()
 
-            # Train for a maximum of 10000 steps, or until convergence (see help for the
-            # function train_neural_net() for more on the tolerance/convergence))
             max_iter = 10000
+            print('Training model of type:\n{}\n'.format(str(model())))
 
-            # Go to the file 'toolbox_02450.py' in the Tools sub-folder of the toolbox
-            # and see how the network is trained (search for 'def train_neural_net',
-            # which is the place the function below is defined)
+            # Do cross-validation:
+            errors = []  # make a list for storing generalizaition error in each loop
+            # Loop over each cross-validation split. The CV.split-method returns the
+            # indices to be used for training and testing in each split, and calling
+            # the enumerate-method with this simply returns this indices along with
+            # a counter k:
+            # for k, (train_index, test_index) in enumerate(CV.split(X, YY)):
+            #     print('\nCrossvalidation fold: {0}/{1}'.format(k + 1, K))
+            #
+            #     # Extract training and test set for current CV fold,
+            #     # and convert them to PyTorch tensors
+            #     X_train = torch.tensor(X[train_index, :], dtype=torch.float)
+            #     y_train = torch.tensor(YY[train_index], dtype=torch.long)
+            #     X_test = torch.tensor(X[test_index, :], dtype=torch.float)
+            #     y_test = torch.tensor(YY[test_index], dtype=torch.long)
+
             net, final_loss, learning_curve = train_neural_net(model,
                                                                loss_fn,
                                                                X=X_train_in_torch,
@@ -468,14 +463,17 @@ def compare_ann_baseline():
                                                                n_replicates=3,
                                                                max_iter=max_iter)
 
-            y_res = net(X_test_in_torch)
+            print('\n\tBest loss: {}\n'.format(final_loss))
 
-            y_res = y_res.data.numpy()
-            # y_test = y_test.data.numpy()
+            softmax_logits = net(torch.tensor(X_test, dtype=torch.float))
+            # Get the estimated class as the class with highest probability (argmax on softmax_logits)
+            y_test_est = (torch.max(softmax_logits, dim=1)[1]).data.numpy()
+            # Determine errors
+            e = (y_test_est != y_test)
 
-            eval_error = np.square(y_test_in - y_res).sum(axis=0) / y_test_in.shape[0]
+            eer = sum(e) / len(e)
 
-            Error_test_ann_inner[ink] = eval_error
+            Error_test_ann_inner[ink] = eer
 
             # increment inner index
             ink += 1
@@ -506,32 +504,34 @@ def t_test_analais(r_vals,alpha = 0.05):
 
 
 print("\n Comparison 1  \n")
-# # ANN and lin reg
-# Error_test_lin,Error_test_ann,r_values = compare_ann_lin_reg()
-#
-# print("Compare ANN and lin reg")
-# print("ANN results")
-# print("Errors: ")
-# pprint.pprint(Error_test_ann)
-#
-# print("Lin reg results")
-# print("Errors: ")
-# pprint.pprint(Error_test_lin)
+# ANN and lin reg
+Error_test_lin,Error_test_ann,r_values = compare_ann_lin_reg()
 
-print("\n Comparison 2  \n")
-# baseline and lin reg
-Error_test_lin,Error_test_baseline,r_values = compare_baseline_lin_reg()
-
-print("Compare Baseline and lin reg")
-print("Baseline results")
+print("Compare ANN and lin reg")
+print("ANN results")
 print("Errors: ")
-pprint.pprint(Error_test_baseline)
+pprint.pprint(Error_test_ann)
 
 print("Lin reg results")
 print("Errors: ")
 pprint.pprint(Error_test_lin)
 
 print("11.4.1 analasis")
+
+print("\n Comparison 2  \n")
+# # baseline and lin reg
+# Error_test_lin,Error_test_baseline,r_values = compare_baseline_lin_reg()
+#
+# print("Compare Baseline and lin reg")
+# print("Baseline results")
+# print("Errors: ")
+# pprint.pprint(Error_test_baseline)
+#
+# print("Lin reg results")
+# print("Errors: ")
+# pprint.pprint(Error_test_lin)
+#
+# print("11.4.1 analasis")
 
 print("\n Comparison 3  \n")
 # baseline and ann
