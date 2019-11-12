@@ -12,7 +12,6 @@ from matplotlib.pyplot import figure, plot, xlabel, ylabel, clim, semilogx, logl
 import pprint
 import random
 import torch
-import scipy.stats as stats
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
@@ -147,7 +146,7 @@ other_data = other_data * (1 / np.std(other_data, 0))
 X = np.concatenate((X_K1, other_data), axis=1)
 X_labesls = K1_labels + [attributes[i] for i in other_params]
 
-def compare_ann_lin_reg():
+def compare_ann_lin_reg_old():
     C = 3
     opt_lam =15.264
     h_lays = 15
@@ -227,7 +226,7 @@ def compare_ann_lin_reg():
 
             loss_fn = torch.nn.CrossEntropyLoss()
 
-            max_iter = 100
+            max_iter = 10000
             print('Training model of type:\n{}\n'.format(str(model())))
 
             # Do cross-validation:
@@ -282,7 +281,7 @@ def compare_ann_lin_reg():
 
     return Error_test_lin,Error_test_ann,r_values
 
-def compare_baseline_lin_reg():
+def compare_baseline_lin_reg_old():
     opt_lam =100
     h_lays = 15
     N, M = X.shape
@@ -366,8 +365,7 @@ def compare_baseline_lin_reg():
 
     return Error_test_lin,Error_test_baseline,r_values
 
-def compare_ann_baseline():
-    C = 3
+def compare_ann_baseline_old():
     opt_lam =100
     h_lays = 15
     N, M = X.shape
@@ -419,7 +417,7 @@ def compare_ann_baseline():
             unique, counts = np.unique(y_train, return_counts=True)
             eval_error = max(counts) / sum(counts)
 
-            Error_test_baseline_inner[ink] = eval_error
+            Error_test_basline_inner[ink] = eval_error
 
             # ANN
 
@@ -439,7 +437,7 @@ def compare_ann_baseline():
 
             loss_fn = torch.nn.CrossEntropyLoss()
 
-            max_iter = 100
+            max_iter = 10000
             print('Training model of type:\n{}\n'.format(str(model())))
 
             # Do cross-validation:
@@ -485,14 +483,167 @@ def compare_ann_baseline():
         Error_test_ann[outk] = Error_test_ann_inner
 
         # Calculate error as in 11.4.1
-        r_j = sum(i-j for i,j in zip(Error_test_ann_inner,Error_test_baseline_inner))/len(Error_test_ann[outk])
+        r_j = sum(i-j for i,j in zip(Error_test_ann_inner,Error_test_baseline_inner))/len(Error_test_ann_inner[outk])
 
         r_values[outk] = r_j
 
         # increment outter index
         outk += 1
 
-    return Error_test_baseline, Error_test_ann,r_values
+    return Error_test_baseline,Error_test_ann,r_values
+
+def baseline(opt_lam, X_train_in, X_test_in, y_train, y_train_in, y_test, y_test_in, X_train_in_torch, X_test_in_torch, y_train_in_torch, m, h_lays):
+    unique, counts = np.unique(y_train, return_counts=True)
+    eval_error = max(counts) / sum(counts)
+    return eval_error
+
+def lin_reg(opt_lam, X_train_in, X_test_in, y_train, y_train_in, y_test, y_test_in, X_train_in_torch, X_test_in_torch, y_train_in_torch, m, h_lays):
+    mdl = LogisticRegression(penalty='l2', C=1 / opt_lam, solver="lbfgs", multi_class="auto",
+                             max_iter=10000)
+
+    mdl.fit(X_train_in, y_train_in)
+
+    y_train_est = mdl.predict(X_train_in).T
+    y_test_est = mdl.predict(X_test_in).T
+
+    eval_error = np.sum(y_test_est != y_test_in) / len(y_test_in)
+
+    return Error_test_lin_e
+
+def ann(opt_lam, X_train_in, X_test, X_test_in, y_train, y_train_in, y_test, y_test_in, X_train_in_torch, X_test_in_torch, y_train_in_torch, m, h_lays, c):
+    model = lambda: torch.nn.Sequential(
+        torch.nn.Linear(m, h_lays),  # M features to H hiden units
+        torch.nn.ReLU(),  # 1st transfer function
+        # Output layer:
+        # H hidden units to C classes
+        # the nodes and their activation before the transfer
+        # function is often referred to as logits/logit output
+        torch.nn.Linear(h_lays, c),  # C logits
+        # To obtain normalised "probabilities" of each class
+        # we use the softmax-funtion along the "class" dimension
+        # (i.e. not the dimension describing observations)
+        torch.nn.Softmax(dim=1)  # final tranfer function, normalisation of logit output
+    )
+
+    loss_fn = torch.nn.CrossEntropyLoss()
+
+    max_iter = 10000
+    print('Training model of type:\n{}\n'.format(str(model())))
+
+    # Do cross-validation:
+    errors = []  # make a list for storing generalizaition error in each loop
+    # Loop over each cross-validation split. The CV.split-method returns the
+    # indices to be used for training and testing in each split, and calling
+    # the enumerate-method with this simply returns this indices along with
+    # a counter k:
+    # for k, (train_index, test_index) in enumerate(CV.split(X, YY)):
+    #     print('\nCrossvalidation fold: {0}/{1}'.format(k + 1, K))
+    #
+    #     # Extract training and test set for current CV fold,
+    #     # and convert them to PyTorch tensors
+    #     X_train = torch.tensor(X[train_index, :], dtype=torch.float)
+    #     y_train = torch.tensor(YY[train_index], dtype=torch.long)
+    #     X_test = torch.tensor(X[test_index, :], dtype=torch.float)
+    #     y_test = torch.tensor(YY[test_index], dtype=torch.long)
+
+    net, final_loss, learning_curve = train_neural_net(model,
+                                                       loss_fn,
+                                                       X=X_train_in_torch,
+                                                       y=y_train_in_torch,
+                                                       n_replicates=3,
+                                                       max_iter=max_iter)
+
+    print('\n\tBest loss: {}\n'.format(final_loss))
+
+    softmax_logits = net(torch.tensor(X_test, dtype=torch.float))
+    # Get the estimated class as the class with highest probability (argmax on softmax_logits)
+    y_test_est = (torch.max(softmax_logits, dim=1)[1]).data.numpy()
+    # Determine errors
+    e = (y_test_est != y_test)
+
+    eval_error = sum(e) / len(e)
+
+    return eval_error
+
+def compare_wrapper(fun1, fun2):
+    opt_lam =100
+    h_lays = 15
+    N, M = X.shape
+    m = M
+    K = 10
+    cvf = 10
+    CV = skmd.KFold(K, random_state=17, shuffle=False)
+
+    error_test1 = []
+    error_test2 = []
+
+    r_values = []
+
+    outk = 0
+    for train_index, test_index in CV.split(X, Y):
+        X_train = X[train_index]
+        y_train = Y[train_index]
+        X_test = X[test_index]
+        y_test = Y[test_index]
+
+        X_train = X_train.astype(np.float64)
+        y_train = y_train.astype(np.float64)
+        X_test = X_test.astype(np.float64)
+        y_test = y_test.astype(np.float64)
+
+        CV = skmd.KFold(cvf, random_state=17, shuffle=True)
+
+        error_test_inner1 = []
+        error_test_inner2 = []
+
+        for inner_train_index, inner_test_index in CV.split(X_train, y_train):
+            X_train_in = X[inner_train_index].astype(np.float64)
+            y_train_in = Y[inner_train_index].astype(np.float64)
+            X_test_in = X[inner_test_index].astype(np.float64)
+            y_test_in = Y[inner_test_index].astype(np.float64)
+
+            X_train_in_torch = torch.tensor(X_train_in, dtype=torch.float)
+            y_train_in_torch = torch.tensor(y_train_in, dtype=torch.float)
+            X_test_in_torch = torch.tensor(X_test_in, dtype=torch.float)
+
+            y_train_in = y_train_in.reshape((y_train_in.shape[0],))
+            y_test_in = y_test_in.reshape((y_test_in.shape[0],))
+
+            eval_error1 = fun1(opt_lam, X_train_in, X_test_in, y_train_in, y_test, y_test_in, X_train_in_torch, X_test_in_torch, y_train_in_torch, m, h_lays)
+            eval_error2 = fun2(opt_lam, X_train_in, X_test_in, y_train_in, y_test, y_test_in, X_train_in_torch, X_test_in_torch, y_train_in_torch, m, h_lays)
+            error_test_inner1.append(eval_error1)
+            error_test_inner2.append(eval_error2)
+
+        # save errors
+        error_test1.append(error_test_inner1)
+        error_test2.append(error_test_inner2)
+        # print(len(error_test2))
+        # print(outk)
+
+        # print(len(Error_test_baseline), len(Error_test_baseline[0]))
+        # print(len(Error_test_ann), len(Error_test_ann[0]))
+        if fun2 == ann:
+            denominator = len(error_test_inner2[outk])
+        else:
+            denominator = len(error_test2[outk])
+        error_test_inner2 = list(map(np.mean, error_test_inner2))
+
+        # Calculate error as in 11.4.1
+        r_j = sum(i - j for i, j in zip(error_test_inner2, error_test_inner1)) / denominator
+        r_values.append(r_j)
+
+        outk += 1
+
+    return error_test1, error_test2, r_values
+
+def compare_baseline_lin_reg():
+    return compare_wrapper(baseline, lin_reg)
+
+def compare_ann_lin_reg():
+    return compare_wrapper(lin_reg, ann)
+
+def compare_ann_baseline():
+    return compare_wrapper(baseline, ann)
 
 def t_test_analysis(r_vals, alpha=.05):
     j = len(r_vals)
@@ -503,9 +654,14 @@ def t_test_analysis(r_vals, alpha=.05):
     p_value = stats.t.cdf(-abs(r_mean) / stats.sem(r_vals), df=j - 1)
     return conf_int, p_value
 
+    
+
+
+
+
+print("\n Comparison 1  \n")
 # ANN and lin reg
-Error_test_lin, Error_test_ann, r_values = compare_ann_baseline()
-conf_int, p_value = t_test_analysis(r_values)
+Error_test_lin,Error_test_ann,r_values = compare_ann_lin_reg()
 
 print("Compare ANN and lin reg")
 print("ANN results")
@@ -516,9 +672,9 @@ print("Lin reg results")
 print("Errors: ")
 pprint.pprint(Error_test_lin)
 
-print("t-test")
-print(f"confidence interval: {conf_int}")
-print(f"p-value: {p_value}")
+print("11.4.1 analasis")
+
+print("\n Comparison 2  \n")
 # # baseline and lin reg
 # Error_test_lin,Error_test_baseline,r_values = compare_baseline_lin_reg()
 #

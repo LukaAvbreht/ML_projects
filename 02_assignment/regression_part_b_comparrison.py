@@ -656,10 +656,6 @@ def t_test_analysis(r_vals, alpha=.05):
     p_value = stats.t.cdf(-abs(r_mean) / stats.sem(r_vals), df=j - 1)
     return conf_int, p_value
 
-
-
-
-
 # print("\n Comparison 1  \n")
 # # ANN and lin reg
 # Error_test_lin,Error_test_ann,r_values = compare_ann_lin_reg()
