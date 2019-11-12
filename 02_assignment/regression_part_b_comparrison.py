@@ -12,8 +12,9 @@ from matplotlib.pyplot import figure, plot, xlabel, ylabel, clim, semilogx, logl
 import pprint
 import random
 import torch
+import scipy.stats as stats
 
-# from regression_part_a import OPT_lambda_part_2, X2, YY, XX, X2_labesls
+# from regression_part_a import OPT_lambda_part_2, X2, YY, XX, X2_labels
 
 # Again import data
 airbnb_data = "../data/AB_NYC_2019.csv"
@@ -47,6 +48,7 @@ print("Size of original dataframe: ", data_frame_original.size)
 # TODO TAKE CARE
 # Get random part of data to get more sense of visualization:
 data_frame = data_frame_original.sample(frac=0.1)
+# print(data_frame)
 
 raw_data = data_frame.get_values()
 attributes = list(data_frame.columns)
@@ -94,6 +96,7 @@ Y = Y.reshape((Y.shape[0], 1))
 
 print("Shape of Y")
 print(Y.shape)
+# print(Y)
 
 # Standarize our data matrix
 # One out K for nbh
@@ -123,21 +126,21 @@ other_data = other_data * (1 / np.std(other_data, 0))
 # Concatenate all of the data int one matrix
 
 X = np.concatenate((X_K1, X_K2, other_data), axis=1)
-X_labesls = K1_labels + K2_labels + [attributes[i] for i in other_params]
+X_labels = K1_labels + K2_labels + [attributes[i] for i in other_params]
 
 print("X shape: ")
 print(X.shape)
 
 print("X labels")
-print(X_labesls)
+print(X_labels)
 
-def compare_ann_lin_reg():
+def compare_ann_lin_reg_old():
     opt_lam =100
     h_lays = 15
     N, M = X.shape
     K = 10
     cvf = 10
-    CV = skmd.KFold(K, shuffle=False)
+    CV = skmd.KFold(K, random_state=17, shuffle=False)
 
     Error_test_lin = [0 for i in range(K)]
 
@@ -157,7 +160,7 @@ def compare_ann_lin_reg():
         X_test = X_test.astype(np.float64)
         y_test = y_test.astype(np.float64)
 
-        CV = skmd.KFold(cvf, shuffle=True)
+        CV = skmd.KFold(cvf, random_state=17, shuffle=True)
 
         Error_test_lin_inner = [0 for i in range(cvf)]
 
@@ -267,13 +270,13 @@ def compare_ann_lin_reg():
 
     return Error_test_lin,Error_test_ann,r_values
 
-def compare_baseline_lin_reg():
+def compare_baseline_lin_reg_old():
     opt_lam =100
     h_lays = 15
     N, M = X.shape
     K = 10
     cvf = 10
-    CV = skmd.KFold(K, shuffle=False)
+    CV = skmd.KFold(K, random_state=17, shuffle=False)
 
     Error_test_lin = [0 for i in range(K)]
 
@@ -293,7 +296,7 @@ def compare_baseline_lin_reg():
         X_test = X_test.astype(np.float64)
         y_test = y_test.astype(np.float64)
 
-        CV = skmd.KFold(cvf, shuffle=True)
+        CV = skmd.KFold(cvf, random_state=17, shuffle=True)
 
         Error_test_lin_inner = [0 for i in range(cvf)]
 
@@ -373,19 +376,18 @@ def compare_baseline_lin_reg():
 
     return Error_test_lin,Error_test_baseline,r_values
 
-def compare_ann_baseline():
+def compare_ann_baseline_old():
     opt_lam =100
     h_lays = 15
     N, M = X.shape
     K = 10
     cvf = 10
-    CV = skmd.KFold(K, shuffle=False)
+    CV = skmd.KFold(K, random_state=17, shuffle=False)
 
-    Error_test_baseline = [0 for i in range(K)]
+    Error_test_baseline = []
+    Error_test_ann = []
 
-    Error_test_ann = [0 for i in range(K)]
-
-    r_values = [0 for i in range(K)]
+    r_values = []
 
     outk = 0
     for train_index, test_index in CV.split(X, Y):
@@ -399,14 +401,22 @@ def compare_ann_baseline():
         X_test = X_test.astype(np.float64)
         y_test = y_test.astype(np.float64)
 
-        CV = skmd.KFold(cvf, shuffle=True)
+        # print(test_index)
+        # print(y_train)
+        # print(len(y_train))
 
-        Error_test_baseline_inner = [0 for i in range(cvf)]
+        CV = skmd.KFold(cvf, random_state=17, shuffle=True)
 
-        Error_test_ann_inner = [0 for i in range(cvf)]
+        Error_test_baseline_inner = []
+        Error_test_ann_inner = []
 
-        ink = 0
         for inner_train_index, inner_test_index in CV.split(X_train, y_train):
+            # print(inner_test_index)
+            print(len(inner_test_index))
+            # print(Y[inner_test_index])
+
+            # print(np.matrix(Error_test_baseline_inner).shape)
+            # print(np.matrix(Error_test_ann_inner).shape)
 
             X_train_in = X[inner_train_index].astype(np.float64)
             y_train_in = Y[inner_train_index].astype(np.float64)
@@ -418,7 +428,10 @@ def compare_ann_baseline():
             X_test_in_torch = torch.tensor(X_test_in, dtype=torch.float)
 
             y_train_in = y_train_in.reshape((y_train_in.shape[0],))
+            # print(y_test_in.shape)
+            # print(y_test_in.shape[0])
             y_test_in = y_test_in.reshape((y_test_in.shape[0],))
+            # print(y_test_in.shape)
 
             # Baseline
 
@@ -426,7 +439,7 @@ def compare_ann_baseline():
 
             eval_error = np.square(y_test_in - y_pred).sum(axis=0) / y_test.shape[0]
 
-            Error_test_baseline_inner[ink] = eval_error
+            Error_test_baseline_inner.append(eval_error)
 
             # ANN
 
@@ -443,7 +456,7 @@ def compare_ann_baseline():
 
             # Train for a maximum of 10000 steps, or until convergence (see help for the
             # function train_neural_net() for more on the tolerance/convergence))
-            max_iter = 10000
+            max_iter = 50
 
             # Go to the file 'toolbox_02450.py' in the Tools sub-folder of the toolbox
             # and see how the network is trained (search for 'def train_neural_net',
@@ -456,43 +469,198 @@ def compare_ann_baseline():
                                                                max_iter=max_iter)
 
             y_res = net(X_test_in_torch)
-
             y_res = y_res.data.numpy()
+            # print(y_res.shape)
             # y_test = y_test.data.numpy()
 
             eval_error = np.square(y_test_in - y_res).sum(axis=0) / y_test_in.shape[0]
-
-            Error_test_ann_inner[ink] = eval_error
-
-            # increment inner index
-            ink += 1
+            Error_test_ann_inner.append(eval_error)
 
         # save errors
-        Error_test_baseline[outk] = Error_test_baseline_inner
-        Error_test_ann[outk] = Error_test_ann_inner
+        Error_test_baseline.append(Error_test_baseline_inner)
+        Error_test_ann.append(Error_test_ann_inner)
+
+        print(len(Error_test_baseline), len(Error_test_baseline[0]))
+        print(len(Error_test_ann), len(Error_test_ann[0]))
+        denominator = len(Error_test_ann_inner[outk])
+        Error_test_ann_inner = list(map(np.mean, Error_test_ann_inner))
 
         # Calculate error as in 11.4.1
-        r_j = sum(i-j for i,j in zip(Error_test_ann_inner,Error_test_baseline_inner))/len(Error_test_ann_inner[outk])
+        r_j = sum(i-j for i, j in zip(Error_test_ann_inner, Error_test_baseline_inner)) / denominator
+        r_values.append(r_j)
 
-        r_values[outk] = r_j
-
-        # increment outter index
         outk += 1
 
-    return Error_test_baseline,Error_test_ann,r_values
+    return Error_test_baseline, Error_test_ann, r_values
 
-def t_test_analais(r_vals,alpha = 0.05):
-    J = len(r_vals)
+def baseline(opt_lam, X_train_in, X_test_in, y_train_in, y_test, y_test_in, X_train_in_torch, X_test_in_torch, y_train_in_torch, m, h_lays):
+    y_pred = np.mean(y_train_in)
+    eval_error = np.square(y_test_in - y_pred).sum(axis=0) / y_test.shape[0]
+    return eval_error
+
+def lin_reg(opt_lam, X_train_in, X_test_in, y_train_in, y_test, y_test_in, X_train_in_torch, X_test_in_torch, y_train_in_torch, m, h_lays):
+    M = m
+
+    mu = np.mean(X_train_in[:, 1:], 0)
+    sigma = np.std(X_train_in[:, 1:], 0)
+
+    X_train_in[:, 1:] = (X_train_in[:, 1:] - mu) / sigma
+    X_test_in[:, 1:] = (X_test_in[:, 1:] - mu) / sigma
+
+    Xty = X_train_in.T @ y_train_in
+    XtX = X_train_in.T @ X_train_in
+
+    # Compute mean squared error without using the input data at all
+    Error_train_nofeatures = np.square(y_train_in - y_train_in.mean()).sum(axis=0) / y_train_in.shape[0]
+    Error_test_nofeatures = np.square(y_test_in - y_test_in.mean()).sum(axis=0) / y_test_in.shape[0]
+
+    # Estimate weights for the optimal value of lambda, on entire training set
+    lambdaI = opt_lam * np.eye(M)
+    lambdaI[0, 0] = 0  # Do no regularize the bias term
+    w_rlr = np.linalg.solve(XtX + lambdaI, Xty).squeeze()
+    # Compute mean squared error with regularization with optimal lambda
+    Error_train_rlr = np.square(y_train_in - X_train_in @ w_rlr).sum(axis=0) / y_train_in.shape[0]
+    Error_test_rlr = np.square(y_test_in - X_test_in @ w_rlr).sum(axis=0) / y_test_in.shape[0]
+
+    # Estimate weights for unregularized linear regression, on entire training set
+    w_noreg = np.linalg.solve(XtX, Xty).squeeze()
+    # Compute mean squared error without regularization
+    Error_train_lin = np.square(y_train_in - X_train_in @ w_noreg).sum(axis=0) / y_train_in.shape[0]
+
+    # The important thing
+    Error_test_lin_e = np.square(y_test_in - X_test_in @ w_noreg).sum(axis=0) / y_test_in.shape[0]
+
+    return Error_test_lin_e
+
+def ann(opt_lam, X_train_in, X_test_in, y_train_in, y_test, y_test_in, X_train_in_torch, X_test_in_torch, y_train_in_torch, m, h_lays):
+    model = lambda: torch.nn.Sequential(
+        torch.nn.Linear(m, h_lays),  # M features to H hiden units
+        # 1st transfer function, either Tanh or ReLU:
+        torch.nn.ReLU(),
+        # torch.nn.Tanh(),
+        torch.nn.Linear(h_lays, 1),  # H hidden units to 1 output neuron
+        # torch.nn.Sigmoid()  # final tranfer function
+    )
+
+    loss_fn = torch.nn.MSELoss()
+
+    # Train for a maximum of 10000 steps, or until convergence (see help for the
+    # function train_neural_net() for more on the tolerance/convergence))
+    max_iter = 50
+
+    # Go to the file 'toolbox_02450.py' in the Tools sub-folder of the toolbox
+    # and see how the network is trained (search for 'def train_neural_net',
+    # which is the place the function below is defined)
+    net, final_loss, learning_curve = train_neural_net(model,
+                                                       loss_fn,
+                                                       X=X_train_in_torch,
+                                                       y=y_train_in_torch,
+                                                       n_replicates=3,
+                                                       max_iter=max_iter)
+
+    y_res = net(X_test_in_torch)
+
+    y_res = y_res.data.numpy()
+    # y_test = y_test.data.numpy()
+
+    eval_error = np.square(y_test_in - y_res).sum(axis=0) / y_test_in.shape[0]
+
+    return eval_error
+
+def compare_wrapper(fun1, fun2):
+    opt_lam =100
+    h_lays = 15
+    N, M = X.shape
+    m = M
+    K = 10
+    cvf = 10
+    CV = skmd.KFold(K, random_state=17, shuffle=False)
+
+    error_test1 = []
+    error_test2 = []
+
+    r_values = []
+
+    outk = 0
+    for train_index, test_index in CV.split(X, Y):
+        X_train = X[train_index]
+        y_train = Y[train_index]
+        X_test = X[test_index]
+        y_test = Y[test_index]
+
+        X_train = X_train.astype(np.float64)
+        y_train = y_train.astype(np.float64)
+        X_test = X_test.astype(np.float64)
+        y_test = y_test.astype(np.float64)
+
+        CV = skmd.KFold(cvf, random_state=17, shuffle=True)
+
+        error_test_inner1 = []
+        error_test_inner2 = []
+
+        for inner_train_index, inner_test_index in CV.split(X_train, y_train):
+            X_train_in = X[inner_train_index].astype(np.float64)
+            y_train_in = Y[inner_train_index].astype(np.float64)
+            X_test_in = X[inner_test_index].astype(np.float64)
+            y_test_in = Y[inner_test_index].astype(np.float64)
+
+            X_train_in_torch = torch.tensor(X_train_in, dtype=torch.float)
+            y_train_in_torch = torch.tensor(y_train_in, dtype=torch.float)
+            X_test_in_torch = torch.tensor(X_test_in, dtype=torch.float)
+
+            y_train_in = y_train_in.reshape((y_train_in.shape[0],))
+            y_test_in = y_test_in.reshape((y_test_in.shape[0],))
+
+            eval_error1 = fun1(opt_lam, X_train_in, X_test_in, y_train_in, y_test, y_test_in, X_train_in_torch, X_test_in_torch, y_train_in_torch, m, h_lays)
+            eval_error2 = fun2(opt_lam, X_train_in, X_test_in, y_train_in, y_test, y_test_in, X_train_in_torch, X_test_in_torch, y_train_in_torch, m, h_lays)
+            error_test_inner1.append(eval_error1)
+            error_test_inner2.append(eval_error2)
+
+        # save errors
+        error_test1.append(error_test_inner1)
+        error_test2.append(error_test_inner2)
+        # print(len(error_test2))
+        # print(outk)
+
+        # print(len(Error_test_baseline), len(Error_test_baseline[0]))
+        # print(len(Error_test_ann), len(Error_test_ann[0]))
+        if fun2 == ann:
+            denominator = len(error_test_inner2[outk])
+        else:
+            denominator = len(error_test2[outk])
+        error_test_inner2 = list(map(np.mean, error_test_inner2))
+
+        # Calculate error as in 11.4.1
+        r_j = sum(i - j for i, j in zip(error_test_inner2, error_test_inner1)) / denominator
+        r_values.append(r_j)
+
+        outk += 1
+
+    return error_test1, error_test2, r_values
+
+def compare_baseline_lin_reg():
+    return compare_wrapper(baseline, lin_reg)
+
+def compare_ann_lin_reg():
+    return compare_wrapper(lin_reg, ann)
+
+def compare_ann_baseline():
+    return compare_wrapper(baseline, ann)
+
+def t_test_analysis(r_vals, alpha=.05):
+    j = len(r_vals)
     npr_vals = np.array(r_vals)
-    r_st = np.mean(npr_vals)
+    r_mean = np.mean(npr_vals)
     r_std = np.std(npr_vals)
+    conf_int = stats.t.interval(1 - alpha, j - 1, loc=r_mean, scale = stats.sem(r_vals))
+    p_value = stats.t.cdf(-abs(r_mean) / stats.sem(r_vals), df=j - 1)
+    return conf_int, p_value
 
 
 
 
 
-
-print("\n Comparison 1  \n")
+# print("\n Comparison 1  \n")
 # # ANN and lin reg
 # Error_test_lin,Error_test_ann,r_values = compare_ann_lin_reg()
 #
@@ -505,22 +673,38 @@ print("\n Comparison 1  \n")
 # print("Errors: ")
 # pprint.pprint(Error_test_lin)
 
-print("\n Comparison 2  \n")
+# print("\n Comparison 2  \n")
 # baseline and lin reg
-Error_test_lin,Error_test_baseline,r_values = compare_baseline_lin_reg()
+for strings, fun in ((["ANN", "baseline"], compare_ann_baseline),
+                     (["baseline", "lin_reg"], compare_baseline_lin_reg),
+                     (["ANN", "lin_reg"], compare_ann_lin_reg)):
+    string = "".join(strings)
+    string1, string2 = strings
 
-print("Compare Baseline and lin reg")
-print("Baseline results")
-print("Errors: ")
-pprint.pprint(Error_test_baseline)
+    error1, error2, r_values = fun()
+    conf_int, p_value = t_test_analysis(r_values)
 
-print("Lin reg results")
-print("Errors: ")
-pprint.pprint(Error_test_lin)
+    print(f"compare {string1} and {string2}")
 
-print("11.4.1 analasis")
+    print(f"{string1} error")
+    pprint.pprint(error1)
 
-print("\n Comparison 3  \n")
+    print(f"{string2} error")
+    pprint.pprint(error2)
+
+    print("t-test")
+    print(f"confidence interval: {conf_int}")
+    print(f"p-value: {p_value}")
+
+# print("Compare ANN and baseline")
+# 
+# print("Lin reg results")
+# print("Errors: ")
+# pprint.pprint(Error_test_lin)
+
+# print("11.4.1 analysis")
+
+# print("\n Comparison 3  \n")
 # baseline and ann
 # Error_test_baseline,Error_test_ann,r_values = compare_ann_baseline()
 #
