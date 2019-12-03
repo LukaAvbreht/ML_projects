@@ -13,6 +13,8 @@ import pprint
 import random
 import torch
 
+import scipy.stats as st
+
 # from regression_part_a import OPT_lambda_part_2, X2, YY, XX, X2_labesls
 
 # Again import data
