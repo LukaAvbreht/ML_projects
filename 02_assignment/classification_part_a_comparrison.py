@@ -12,6 +12,7 @@ from matplotlib.pyplot import figure, plot, xlabel, ylabel, clim, semilogx, logl
 import pprint
 import random
 import torch
+import scipy.stats as stats
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
@@ -226,7 +227,7 @@ def compare_ann_lin_reg():
 
             loss_fn = torch.nn.CrossEntropyLoss()
 
-            max_iter = 10000
+            max_iter = 100
             print('Training model of type:\n{}\n'.format(str(model())))
 
             # Do cross-validation:
@@ -366,6 +367,7 @@ def compare_baseline_lin_reg():
     return Error_test_lin,Error_test_baseline,r_values
 
 def compare_ann_baseline():
+    C = 3
     opt_lam =100
     h_lays = 15
     N, M = X.shape
@@ -417,7 +419,7 @@ def compare_ann_baseline():
             unique, counts = np.unique(y_train, return_counts=True)
             eval_error = max(counts) / sum(counts)
 
-            Error_test_basline_inner[ink] = eval_error
+            Error_test_baseline_inner[ink] = eval_error
 
             # ANN
 
@@ -437,7 +439,7 @@ def compare_ann_baseline():
 
             loss_fn = torch.nn.CrossEntropyLoss()
 
-            max_iter = 10000
+            max_iter = 100
             print('Training model of type:\n{}\n'.format(str(model())))
 
             # Do cross-validation:
@@ -483,29 +485,27 @@ def compare_ann_baseline():
         Error_test_ann[outk] = Error_test_ann_inner
 
         # Calculate error as in 11.4.1
-        r_j = sum(i-j for i,j in zip(Error_test_ann_inner,Error_test_baseline_inner))/len(Error_test_ann_inner[outk])
+        r_j = sum(i-j for i,j in zip(Error_test_ann_inner,Error_test_baseline_inner))/len(Error_test_ann[outk])
 
         r_values[outk] = r_j
 
         # increment outter index
         outk += 1
 
-    return Error_test_baseline,Error_test_ann,r_values
+    return Error_test_baseline, Error_test_ann,r_values
 
-def t_test_analais(r_vals,alpha = 0.05):
-    J = len(r_vals)
+def t_test_analysis(r_vals, alpha=.05):
+    j = len(r_vals)
     npr_vals = np.array(r_vals)
-    r_st = np.mean(npr_vals)
+    r_mean = np.mean(npr_vals)
     r_std = np.std(npr_vals)
+    conf_int = stats.t.interval(1 - alpha, j - 1, loc=r_mean, scale = stats.sem(r_vals))
+    p_value = stats.t.cdf(-abs(r_mean) / stats.sem(r_vals), df=j - 1)
+    return conf_int, p_value
 
-    
-
-
-
-
-print("\n Comparison 1  \n")
 # ANN and lin reg
-Error_test_lin,Error_test_ann,r_values = compare_ann_lin_reg()
+Error_test_lin, Error_test_ann, r_values = compare_ann_baseline()
+conf_int, p_value = t_test_analysis(r_values)
 
 print("Compare ANN and lin reg")
 print("ANN results")
@@ -516,9 +516,9 @@ print("Lin reg results")
 print("Errors: ")
 pprint.pprint(Error_test_lin)
 
-print("11.4.1 analasis")
-
-print("\n Comparison 2  \n")
+print("t-test")
+print(f"confidence interval: {conf_int}")
+print(f"p-value: {p_value}")
 # # baseline and lin reg
 # Error_test_lin,Error_test_baseline,r_values = compare_baseline_lin_reg()
 #
